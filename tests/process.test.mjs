@@ -1,7 +1,35 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { terminateProcessTree } from "../plugins/codex/scripts/lib/process.mjs";
+import { prepareSpawnCommand, terminateProcessTree } from "../plugins/codex/scripts/lib/process.mjs";
+
+test("prepareSpawnCommand preserves Windows cmd argument boundaries", () => {
+  const invocation = prepareSpawnCommand(
+    "codex",
+    ["-c", "key=value with spaces", "-c", "url=https://example.test?a=1&b=2"],
+    { platform: "win32", shell: true }
+  );
+
+  assert.deepEqual(invocation, {
+    command:
+      'codex ^"-c^" ^"key=value^ with^ spaces^" ^"-c^" ^"url=https://example.test^?a=1^&b=2^"',
+    args: [],
+    shell: true
+  });
+});
+
+test("prepareSpawnCommand preserves Windows Git Bash argument boundaries", () => {
+  const invocation = prepareSpawnCommand("codex", ["-c", "key=value with spaces", "it's literal"], {
+    platform: "win32",
+    shell: "C:\\Program Files\\Git\\bin\\bash.exe"
+  });
+
+  assert.deepEqual(invocation, {
+    command: `'codex' '-c' 'key=value with spaces' 'it'\\''s literal'`,
+    args: [],
+    shell: "C:\\Program Files\\Git\\bin\\bash.exe"
+  });
+});
 
 test("terminateProcessTree uses taskkill on Windows", () => {
   let captured = null;

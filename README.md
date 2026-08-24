@@ -304,7 +304,7 @@ export CODEX_PLUGIN_CC_ARGS="-c model_provider=my-provider -c 'base_url=https://
 ```
 
 > [!NOTE]
-> The variable is read when a Codex runtime is started. If a shared runtime is already active for the session, change the value and start a fresh session (or cancel the running jobs) so the new arguments take effect.
+> The variable is read when a Codex runtime is started. If a shared runtime is already active, change the value and start a fresh session so the new arguments take effect.
 
 ### Moving The Work Over To Codex
 

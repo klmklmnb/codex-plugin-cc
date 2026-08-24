@@ -172,13 +172,19 @@ test("CODEX_PLUGIN_CC_ARGS is passed through to the codex app-server launch", ()
     cwd: repo,
     env: {
       ...buildEnv(binDir),
-      CODEX_PLUGIN_CC_ARGS: "-c model_provider=my-provider"
+      CODEX_PLUGIN_CC_ARGS: "-c 'model_provider=my provider' -c 'base_url=https://example.test/v1?a=1&b=2'"
     }
   });
 
   assert.equal(result.status, 0, result.stderr);
   const fakeState = JSON.parse(fs.readFileSync(path.join(binDir, "fake-codex-state.json"), "utf8"));
-  assert.deepEqual(fakeState.lastBootArgs, ["-c", "model_provider=my-provider", "app-server"]);
+  assert.deepEqual(fakeState.lastBootArgs, [
+    "-c",
+    "model_provider=my provider",
+    "-c",
+    "base_url=https://example.test/v1?a=1&b=2",
+    "app-server"
+  ]);
 });
 
 test("task runs when the active provider does not require OpenAI login", () => {

@@ -14,7 +14,7 @@ import { spawn } from "node:child_process";
 import readline from "node:readline";
 import { parseBrokerEndpoint } from "./broker-endpoint.mjs";
 import { ensureBrokerSession, loadBrokerSession } from "./broker-lifecycle.mjs";
-import { terminateProcessTree } from "./process.mjs";
+import { prepareSpawnCommand, terminateProcessTree } from "./process.mjs";
 import { getCodexPassthroughArgs } from "./args.mjs";
 
 const PLUGIN_MANIFEST_URL = new URL("../../.claude-plugin/plugin.json", import.meta.url);
@@ -190,11 +190,12 @@ class SpawnedCodexAppServerClient extends AppServerClientBase {
   async initialize() {
     const childEnv = this.options.env ?? process.env;
     const passthroughArgs = getCodexPassthroughArgs(childEnv);
-    this.proc = spawn("codex", [...passthroughArgs, "app-server"], {
+    const invocation = prepareSpawnCommand("codex", [...passthroughArgs, "app-server"], { env: childEnv });
+    this.proc = spawn(invocation.command, invocation.args, {
       cwd: this.cwd,
       env: childEnv,
       stdio: ["pipe", "pipe", "pipe"],
-      shell: process.platform === "win32" ? (process.env.SHELL || true) : false,
+      shell: invocation.shell,
       windowsHide: true
     });
 
@@ -248,9 +249,8 @@ class SpawnedCodexAppServerClient extends AppServerClientBase {
       this.proc.stdin.end();
       setTimeout(() => {
         if (this.proc && !this.proc.killed && this.proc.exitCode === null) {
-          // On Windows with shell: true, the direct child is cmd.exe.
-          // Use terminateProcessTree to kill the entire tree including
-          // the grandchild node process.
+          // On Windows the direct child may be a shell used to launch a command
+          // shim. Terminate the full tree, including the Codex grandchild.
           if (process.platform === "win32") {
             try {
               terminateProcessTree(this.proc.pid);
