@@ -57,7 +57,7 @@ export function prepareSpawnCommand(command, args = [], options = {}) {
 }
 
 export function runCommand(command, args = [], options = {}) {
-  const invocation = prepareSpawnCommand(command, args, { env: options.env });
+  const invocation = prepareSpawnCommand(command, args, { env: options.env, shell: options.shell });
   const result = spawnSync(invocation.command, invocation.args, {
     cwd: options.cwd,
     env: options.env,

@@ -31,6 +31,14 @@ test("prepareSpawnCommand preserves Windows Git Bash argument boundaries", () =>
   });
 });
 
+test("prepareSpawnCommand honors an explicit shell opt-out on Windows", () => {
+  assert.deepEqual(prepareSpawnCommand("git", ["rev-parse", "main&branch"], { platform: "win32", shell: false }), {
+    command: "git",
+    args: ["rev-parse", "main&branch"],
+    shell: false
+  });
+});
+
 test("terminateProcessTree uses taskkill on Windows", () => {
   let captured = null;
   const outcome = terminateProcessTree(1234, {
