@@ -43,6 +43,20 @@ test("prepareSpawnCommand keeps percent signs out of cmd.exe source", () => {
   assert.deepEqual(JSON.parse(Buffer.from(payload, "base64").toString("utf8")), original);
 });
 
+test("prepareSpawnCommand invokes configured PowerShell without POSIX quoting", () => {
+  const shell = "C:\\Program Files\\PowerShell\\7\\pwsh.exe";
+  const original = { command: "codex", args: ["-c", "key=value with spaces", "--version"] };
+  const invocation = prepareSpawnCommand(original.command, original.args, { platform: "win32", shell });
+
+  assert.equal(invocation.command, shell);
+  assert.equal(invocation.shell, false);
+  const script = invocation.args.at(-1);
+  assert.doesNotMatch(script, /'codex'|'--version'/);
+  const payload = script.match(/FromBase64String\('([^']+)'\)/)?.[1];
+  assert.ok(payload);
+  assert.deepEqual(JSON.parse(Buffer.from(payload, "base64").toString("utf8")), original);
+});
+
 test("prepareSpawnCommand preserves Windows Git Bash argument boundaries", () => {
   const invocation = prepareSpawnCommand("codex", ["-c", "key=value with spaces", "it's literal"], {
     platform: "win32",

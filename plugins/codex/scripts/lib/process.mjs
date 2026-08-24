@@ -31,7 +31,11 @@ function isCmdShell(shell) {
   return shell === true || /(?:^|[\\/])cmd(?:\.exe)?$/i.test(String(shell));
 }
 
-function preparePowerShellShimCommand(command, args) {
+function isPowerShell(shell) {
+  return /(?:^|[\\/])(?:powershell|pwsh)(?:\.exe)?$/i.test(String(shell));
+}
+
+function preparePowerShellShimCommand(command, args, shell = "powershell.exe") {
   const payload = Buffer.from(JSON.stringify({ command, args }), "utf8").toString("base64");
   const script = [
     `$json = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${payload}'))`,
@@ -45,7 +49,7 @@ function preparePowerShellShimCommand(command, args) {
   ].join("; ");
 
   return {
-    command: "powershell.exe",
+    command: shell,
     args: ["-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script],
     shell: false
   };
@@ -65,6 +69,10 @@ export function prepareSpawnCommand(command, args = [], options = {}) {
   const configuredShell = options.shell ?? readEnvValue(env, "SHELL") ?? readEnvValue(process.env, "SHELL") ?? true;
   if (!configuredShell) {
     return { command, args: [...args], shell: false };
+  }
+
+  if (isPowerShell(configuredShell)) {
+    return preparePowerShellShimCommand(command, args, configuredShell);
   }
 
   // cmd.exe expands %NAME% before it processes caret escapes, so percent signs
