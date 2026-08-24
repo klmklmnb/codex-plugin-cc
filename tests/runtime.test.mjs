@@ -172,7 +172,8 @@ test("CODEX_PLUGIN_CC_ARGS is passed through to the codex app-server launch", ()
     cwd: repo,
     env: {
       ...buildEnv(binDir),
-      CODEX_PLUGIN_CC_ARGS: "-c 'model_provider=my provider' -c 'base_url=https://example.test/v1?a=1&b=2'"
+      CODEX_PLUGIN_CC_ARGS:
+        "-c 'model_provider=my provider' -c 'base_url=https://example.test/%2Ftenant%2F/v1?a=1&b=2'"
     }
   });
 
@@ -182,7 +183,7 @@ test("CODEX_PLUGIN_CC_ARGS is passed through to the codex app-server launch", ()
     "-c",
     "model_provider=my provider",
     "-c",
-    "base_url=https://example.test/v1?a=1&b=2",
+    "base_url=https://example.test/%2Ftenant%2F/v1?a=1&b=2",
     "app-server"
   ]);
 });

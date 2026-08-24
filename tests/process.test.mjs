@@ -18,6 +18,31 @@ test("prepareSpawnCommand preserves Windows cmd argument boundaries", () => {
   });
 });
 
+test("prepareSpawnCommand keeps percent signs out of cmd.exe source", () => {
+  const original = {
+    command: "codex",
+    args: ["-c", "base_url=https://example.test/%2Ftenant%2F/v1", "-c", "token=%NAME%"]
+  };
+  const invocation = prepareSpawnCommand(original.command, original.args, { platform: "win32", shell: true });
+
+  assert.equal(invocation.command, "powershell.exe");
+  assert.equal(invocation.shell, false);
+  assert.deepEqual(invocation.args.slice(0, -1), [
+    "-NoLogo",
+    "-NoProfile",
+    "-NonInteractive",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-Command"
+  ]);
+
+  const script = invocation.args.at(-1);
+  assert.doesNotMatch(script, /%2F|%NAME%/);
+  const payload = script.match(/FromBase64String\('([^']+)'\)/)?.[1];
+  assert.ok(payload);
+  assert.deepEqual(JSON.parse(Buffer.from(payload, "base64").toString("utf8")), original);
+});
+
 test("prepareSpawnCommand preserves Windows Git Bash argument boundaries", () => {
   const invocation = prepareSpawnCommand("codex", ["-c", "key=value with spaces", "it's literal"], {
     platform: "win32",

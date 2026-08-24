@@ -31,6 +31,26 @@ function isCmdShell(shell) {
   return shell === true || /(?:^|[\\/])cmd(?:\.exe)?$/i.test(String(shell));
 }
 
+function preparePowerShellShimCommand(command, args) {
+  const payload = Buffer.from(JSON.stringify({ command, args }), "utf8").toString("base64");
+  const script = [
+    `$json = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${payload}'))`,
+    "$spec = $json | ConvertFrom-Json",
+    "$name = [string]$spec.command",
+    "$launcher = Get-Command ($name + '.exe') -CommandType Application -ErrorAction SilentlyContinue",
+    "if (-not $launcher) { $launcher = Get-Command ($name + '.ps1') -CommandType ExternalScript -ErrorAction Stop }",
+    "$launchArgs = @($spec.args)",
+    "& $launcher.Source @launchArgs",
+    "exit $LASTEXITCODE"
+  ].join("; ");
+
+  return {
+    command: "powershell.exe",
+    args: ["-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script],
+    shell: false
+  };
+}
+
 /**
  * Builds a spawn invocation that preserves argv boundaries when Windows needs
  * a shell to launch command shims such as codex.cmd and npm.cmd.
@@ -45,6 +65,14 @@ export function prepareSpawnCommand(command, args = [], options = {}) {
   const configuredShell = options.shell ?? readEnvValue(env, "SHELL") ?? readEnvValue(process.env, "SHELL") ?? true;
   if (!configuredShell) {
     return { command, args: [...args], shell: false };
+  }
+
+  // cmd.exe expands %NAME% before it processes caret escapes, so percent signs
+  // cannot be safely embedded in its command string. Standard npm installs
+  // provide a PowerShell shim alongside the .cmd shim; send argv as base64 JSON
+  // and splat the decoded values so no user content is parsed as shell source.
+  if (isCmdShell(configuredShell) && [command, ...args].some((value) => String(value).includes("%"))) {
+    return preparePowerShellShimCommand(command, args);
   }
 
   const commandLine = isCmdShell(configuredShell)
